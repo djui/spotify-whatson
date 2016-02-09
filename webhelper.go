@@ -132,13 +132,18 @@ func (w *Webhelper) Version() (*VersionResp, error) {
 }
 
 func (w *Webhelper) requestJSON(path string, addParams url.Values) ([]byte, error) {
-	url := generateURL(w.host, w.port, path)
-	params := w.params
+	params := url.Values{}
+	for key, vals := range w.params {
+		for _, val := range vals {
+			params.Add(key, val)
+		}
+	}
 	for key, vals := range addParams {
 		for _, val := range vals {
 			params.Add(key, val)
 		}
 	}
+	url := generateURL(w.host, w.port, path)
 	return requestJSON(url, params, w.header)
 }
 
