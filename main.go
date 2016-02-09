@@ -2,13 +2,30 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
 )
 
+type status struct {
+	Artist   string
+	Track    string
+	Album    string
+	URL      string
+	Duration string
+	Position string
+}
+
 var s *StatusResp
+var templateHTML *template.Template
+var templateText *template.Template
+
+func init() {
+	templateHTML = template.Must(template.New("html").Parse(templateHTMLFormat))
+	templateText = template.Must(template.New("text").Parse(templateTextFormat))
+}
 
 func main() {
 	log.Println("Authenticating...")
@@ -26,13 +43,19 @@ func main() {
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
+	if s == nil || !s.Running {
+		return
+	}
+
+	status := parseStatus(s)
+
 	switch r.Header.Get("Accept") {
 	default:
 		w.Header().Set("Content-Type", "text/plain")
-		io.WriteString(w, formatStatusText(s))
+		templateText.Execute(w, status)
 	case "text/html":
 		w.Header().Set("Content-Type", "text/html")
-		io.WriteString(w, formatStatusHTML(s))
+		templateHTML.Execute(w, status)
 	}
 }
 
@@ -47,44 +70,15 @@ func runStatusTicker(w *Webhelper) {
 	}
 }
 
-func formatStatusText(s *StatusResp) string {
-	if s == nil || !s.Running {
-		return ""
+func parseStatus(s *StatusResp) *status {
+	return &status{
+		Artist:   s.Track.ArtistResource.Name,
+		Track:    s.Track.TrackResource.Name,
+		Album:    s.Track.AlbumResource.Name,
+		URL:      s.Track.TrackResource.Location.OG,
+		Duration: humanize(s.Track.Length),
+		Position: humanize(int(s.PlayingPosition)),
 	}
-
-	artist := s.Track.ArtistResource.Name
-	track := s.Track.TrackResource.Name
-	album := s.Track.AlbumResource.Name
-	url := s.Track.TrackResource.Location.OG
-	duration := humanize(s.Track.Length)
-	position := humanize(int(s.PlayingPosition))
-
-	return fmt.Sprintf("[%s/%s] %s - %s (%s)\n%s\n",
-		position, duration, artist, track, album, url)
-}
-
-func formatStatusHTML(s *StatusResp) string {
-	if s == nil || !s.Running {
-		return ""
-	}
-
-	artist := s.Track.ArtistResource.Name
-	track := s.Track.TrackResource.Name
-	album := s.Track.AlbumResource.Name
-	url := s.Track.TrackResource.Location.OG
-	duration := humanize(s.Track.Length)
-	position := humanize(int(s.PlayingPosition))
-
-	return fmt.Sprintf(`
-<html>
-<head>
-<title>[%[1]s/%[2]s] %[3]s - %[4]s (%[5]s)</title>
-</head>
-<body>
-<div>[%[1]s/%[2]s] <a href="%[3]s">%[4]s - %[5]s (%[6]s)</a><div>
-</body>
-</html>
-`, position, duration, artist, track, album, url)
 }
 
 func humanize(duration int) string {
@@ -92,3 +86,20 @@ func humanize(duration int) string {
 	seconds := duration % 60
 	return fmt.Sprintf("%02d:%02d", minutes, seconds)
 }
+
+const templateTextFormat = `[{{.Position}}/{{.Duration}}] {{.Artist}} - {{.Track}} ({{.Album}})
+{{.URL}}
+`
+const templateHTMLFormat = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="1">
+  <title>[{{.Position}}/{{.Duration}}] {{.Artist}} - {{.Track}} ({{.Album}})</title>
+</head>
+<body>
+  <div>[{{.Position}}/{{.Duration}}] <a href="{{.URL}}">{{.Artist}} - {{.Track}}</a> ({{.Album}})<div>
+</body>
+</html>
+`
