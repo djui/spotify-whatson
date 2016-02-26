@@ -65,7 +65,7 @@ func runStatusTicker(w *Webhelper) {
 	for _ = range c {
 		status, err := w.Status()
 		if err != nil {
-			log.Fatalln(err)
+			log.Println("Warning:", err)
 		}
 		s = status
 	}
