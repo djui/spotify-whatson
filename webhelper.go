@@ -146,11 +146,11 @@ func (w *Webhelper) requestJSON(path string, addParams url.Values) ([]byte, erro
 		}
 	}
 	url := generateURL(w.host, w.port, path)
-	return requestJSON(url, params, w.header)
+	return doRequestJSON(url, params, w.header)
 }
 
 func getOAuthToken() (string, error) {
-	resp, err := requestJSON("http://open.spotify.com/token", nil, nil)
+	resp, err := doRequestJSON("http://open.spotify.com/token", nil, nil)
 	if err != nil {
 		return "", err
 	}
@@ -164,7 +164,7 @@ func getOAuthToken() (string, error) {
 
 func getCSRFToken(host string, port int, header http.Header) (string, error) {
 	url := generateURL(host, port, "/simplecsrf/token.json")
-	resp, err := requestJSON(url, nil, header)
+	resp, err := doRequestJSON(url, nil, header)
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +176,7 @@ func getCSRFToken(host string, port int, header http.Header) (string, error) {
 	return data.Token, nil
 }
 
-func requestJSON(url string, params url.Values, header http.Header) ([]byte, error) {
+func doRequestJSON(url string, params url.Values, header http.Header) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
