@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -8,6 +9,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
 
 type status struct {
@@ -23,10 +26,12 @@ type status struct {
 var s *StatusResp
 var templateHTML *template.Template
 var templateText *template.Template
+var templateWS *template.Template
 
 func init() {
 	templateHTML = template.Must(template.New("html").Parse(templateHTMLFormat))
 	templateText = template.Must(template.New("text").Parse(templateTextFormat))
+	templateWS = template.Must(template.New("ws").Parse(templateWSFormat))
 }
 
 func main() {
@@ -45,8 +50,22 @@ func main() {
 
 	address := fmt.Sprintf(":%d", *port)
 	http.HandleFunc("/", statusHandler)
+	http.Handle("/ws", websocket.Handler(statusPushHandler))
 	log.Printf("Starting server (%s)...", address)
 	log.Fatal(http.ListenAndServe(address, nil))
+}
+
+func statusPushHandler(conn *websocket.Conn) {
+	for _ = range time.Tick(1 * time.Second) {
+		if s == nil || !s.Running {
+			return
+		}
+
+		status := parseStatus(s)
+		buf := new(bytes.Buffer)
+		templateWS.Execute(buf, status)
+		fmt.Fprintf(conn, "%s", buf)
+	}
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -99,16 +118,26 @@ func humanize(duration int) string {
 const templateTextFormat = `[{{.Position}}/{{.Duration}}] {{.Artist}} - {{.Track}} ({{.Album}})
 {{.URL}}
 `
+
+const templateWSFormat = `[{{.Position}}/{{.Duration}}] <a href="{{.URL}}">{{.Artist}} - {{.Track}}</a> ({{.Album}})`
+
 const templateHTMLFormat = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="1">
   <title>[{{.Position}}/{{.Duration}}] {{.Artist}} - {{.Track}} ({{.Album}})</title>
 </head>
 <body>
-  <div>[{{.Position}}/{{.Duration}}] <a href="{{.URL}}">{{.Artist}} - {{.Track}}</a> ({{.Album}})<div>
+  <div id="status"></div>
+
+	<script>
+	webSocket = new WebSocket("ws://" + window.location.host + "/ws");
+	webSocket.onmessage = function(event) {
+		document.querySelector("title").innerHTML = event.data;
+		document.querySelector("#status").innerHTML = event.data;
+	};
+	</script>
 </body>
 </html>
 `
