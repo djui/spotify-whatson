@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,6 +29,10 @@ func init() {
 }
 
 func main() {
+	port := flag.Int("port", 8080, "Port")
+
+	flag.Parse()
+
 	log.Println("Authenticating...")
 	w, err := NewWebhelper()
 	if err != nil {
@@ -37,9 +42,10 @@ func main() {
 	log.Println("Starting ticker...")
 	go runStatusTicker(w)
 
+	address := fmt.Sprintf(":%d", *port)
 	http.HandleFunc("/", statusHandler)
-	log.Println("Starting server (:8080)...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("Starting server (%s)...", address)
+	log.Fatal(http.ListenAndServe(address, nil))
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
