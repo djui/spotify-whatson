@@ -229,7 +229,7 @@ type StatusResp struct {
 	Context         interface{}        `json:"context"`
 	PlayingPosition float64            `json:"playing_position"`
 	ServerTime      int                `json:"server_time"`
-	Volume          int                `json:"volume"`
+	Volume          float64            `json:"volume"`
 	Online          bool               `json:"online"`
 	OpenGraphState  OpenGraphStateResp `json:"open_graph_state"`
 	Running         bool               `json:"running"`
