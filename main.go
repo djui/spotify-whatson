@@ -75,8 +75,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 	status := parseStatus(s)
 
-	acceptType := strings.Split(r.Header.Get("Accept"), ",")[0]
-	switch acceptType {
+	switch acceptType(r) {
 	default:
 		w.Header().Set("Content-Type", "text/plain")
 		templateText.Execute(w, status)
@@ -84,6 +83,10 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		templateHTML.Execute(w, status)
 	}
+}
+
+func acceptType(r *http.Request) string {
+	return strings.Split(r.Header.Get("Accept"), ",")[0]
 }
 
 func runStatusTicker(w *Webhelper) {
