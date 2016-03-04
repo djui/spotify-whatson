@@ -17,6 +17,7 @@ type status struct {
 	URL      string
 	Duration string
 	Position string
+	Context  interface{} // Currently unused
 }
 
 var s *StatusResp
@@ -85,6 +86,7 @@ func parseStatus(s *StatusResp) *status {
 		URL:      s.Track.TrackResource.Location.OG,
 		Duration: humanize(s.Track.Length),
 		Position: humanize(int(s.PlayingPosition)),
+		Context:  s.Context,
 	}
 }
 
