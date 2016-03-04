@@ -8,21 +8,23 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"time"
 )
-
-func init() {
-	http.DefaultClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
-}
 
 type Webhelper struct {
 	host   string
 	port   int
 	params url.Values
 	header http.Header
+}
+
+func init() {
+	http.DefaultClient.Timeout = 3 * time.Second
+	http.DefaultClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
 }
 
 func NewWebhelper() (*Webhelper, error) {
